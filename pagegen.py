@@ -1,10 +1,7 @@
 import os
 import requests
 import json
-from time import sleep
-from datetime import date
-from datetime import datetime
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 
 DUMMY = True
 URL = 'https://api.spot-hinta.fi/TodayAndDayForward'
@@ -21,16 +18,20 @@ def fetch_data():
 
 def fetch_data_dummy():
     print("using dummy fetch")
-    #sleep(1.0)
     with open('dummy.json', 'r', encoding='utf-8') as f:
         response = f.read()
     return json.loads(response)
 
 TEMPLATE = r'''
-<html>
+<!DOCTYPE html>
+<html lang="fi">
 <head>
+<meta charset="utf-8">
 <title>Sähkön hinta</title>
 <style>
+html, body {
+  font-size: 4vw;
+}
 body {
   margin: 1rem;
 }
@@ -71,6 +72,11 @@ td.time, th.time {
 </tbody>
 </table>
 %FOOTER%
+<script type="text/javascript">
+(function(){
+%UIJS%
+})();
+</script>
 </body>
 </html>
 '''
@@ -85,7 +91,9 @@ def format_cents(value: float):
 
 def calc_average(data):
     items = [x[1] for x in data if x[1] is not None]
-    return sum(items) / len(items)
+    if len(items) > 0:
+        return sum(items) / len(items)
+    return None
 
 def calc_range(data, x):
     items = [y for day in data for y in day]
@@ -140,13 +148,11 @@ def generate_page(data):
     stats['best'] = [calc_range(rows, x) for x in RANGES]
     outdata = []
     for t in range(0, 24):
-        em = ["", ""]
-        if now.hour == t:
-            em = ["<strong>", "</strong>"]
+        hour = rows[0][t][0]
         outdata.append(f"""
-<tr>
-<td class="time">{em[0]}{rows[0][t][0]:0>2}{em[1]}</td>
-<td>{em[0]}{format_cents(rows[0][t][1])}{em[1]}</td>
+<tr id="row-{hour}">
+<td class="time">{hour:0>2}</td>
+<td>{format_cents(rows[0][t][1])}</td>
 <td>{format_cents(rows[1][t][1])}</td></tr>
 """)
     best = [
@@ -158,20 +164,20 @@ def generate_page(data):
         stats['average'][0])} snt; huomenna {format_cents(
         stats['average'][1])} snt</p><p>{"<br>".join(best)}</p>"""
 
+    uijs = ""
+    with open('ui.js', 'r', encoding='utf-8') as js:
+        uijs = js.read()
+    
     out = TEMPLATE.replace(
         "%BODY%", nowf).replace(
         "%TODAY%", dateToStr(today, "%-d.%-m.")).replace(
         "%TOMORROW%", dateToStr(tomorrow, "%-d.%-m.")).replace(
         "%TBODY%", "".join(outdata)).replace(
-        "%FOOTER%", footer)
+        "%FOOTER%", footer).replace(
+        "%UIJS%", uijs)
 
-    with open('index.html', 'w', encoding='utf-8') as f:
-        f.write(out)
-    print("Wrote index.html")
+    return out
 
-def main():
+def generate():
     data = fetch_data_dummy() if DUMMY else fetch_data()
-    generate_page(data)
-
-if __name__ == "__main__":
-    main()
+    return generate_page(data)
