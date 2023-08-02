@@ -83,7 +83,7 @@ TEMPLATE = r'''
 <table>
 <thead>
 <tr>
-<th class="time">Klo</th><th>Tänään %TODAY%</th><th>Huomenna %TOMORROW%</th>
+<th class="time">Klo</th><th>Tänään %TODAY%</th><th>PK</th><th>Huomenna %TOMORROW%</th><th>PK</th>
 </tr>
 </thead>
 <tbody>
@@ -114,9 +114,9 @@ def calc_average(data):
         return sum(items) / len(items)
     return None
 
-def calc_range(data, x):
+def calc_range(data, x, now: datetime):
     items = [y for day in data for y in day]
-
+    items = [y for y in items if y[0] >= now.hour] # only look at future
     sums = []
     for i in range(0, len(items)):
         r = items[i:i+x]
@@ -126,10 +126,31 @@ def calc_range(data, x):
 
     return sorted(sums)
 
-def render_best(best, amount):
+def safe_list_get (l, i, default):
+    try:
+        return l[i]
+    except IndexError:
+        return default
+
+def calc_pk(data):
+    items = [y[1] for y in data]
+    out = []
+    for i in range(0, len(items)):
+        pk = [safe_list_get(items, j, None) for j in range(i, i + RANGES[0])]
+        if all([z is not None for z in pk]):
+            out.append(sum(pk) * 1.8 / RANGES[0])
+        else:
+            out.append(None)
+    return out
+
+def render_best(best, index, amount) -> str:
     res = []
+    try:
+        best[index][0]
+    except IndexError:
+        return ""
     for i in range(0, amount):
-        hour = best[i][1][0][0]
+        hour = best[index][i][1][0][0]
         if hour is not None:
             if hour < 24:
                 res.append(f"tänään {hour}:00")
@@ -164,7 +185,11 @@ def generate_page(data):
         calc_average(rows[0]),
         calc_average(rows[1])
     )
-    stats['best'] = [calc_range(rows, x) for x in RANGES]
+    stats['pk'] = (
+        calc_pk(rows[0]),
+        calc_pk(rows[1])
+    )
+    stats['best'] = [calc_range(rows, x, now) for x in RANGES]
     outdata = []
     for t in range(0, 24):
         hour = rows[0][t][0]
@@ -172,10 +197,13 @@ def generate_page(data):
 <tr id="row-{hour}">
 <td class="time">{hour:0>2}</td>
 <td style="background-color: {rgb2hex(color_for_price(rows[0][t][1]))};">{format_cents(rows[0][t][1])}</td>
-<td style="background-color: {rgb2hex(color_for_price(rows[1][t][1]))};">{format_cents(rows[1][t][1])}</td></tr>
+<td>{format_cents(stats['pk'][0][hour])}</td>
+<td style="background-color: {rgb2hex(color_for_price(rows[1][t][1]))};">{format_cents(rows[1][t][1])}</td>
+<td>{format_cents(stats['pk'][1][hour])}</td>
+</tr>
 """)
     best = [
-        f"""Halvin {RANGES[i]} tuntia: {render_best(stats['best'][i], 3)}""" for i in range(
+        f"""Halvin {RANGES[i]} tuntia: {render_best(stats['best'], i, 3)}""" for i in range(
             0, len(RANGES))]
 
 
