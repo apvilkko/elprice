@@ -28,36 +28,7 @@ TEMPLATE = r'''
 <head>
 <meta charset="utf-8">
 <title>Sähkön hinta</title>
-<style>
-html, body {
-  font-size: 4vw;
-}
-body {
-  margin: 1rem;
-}
-table {
-  margin: 0;
-  padding: 0;
-  margin-top: 1rem;
-}
-th {
-  text-align: left;
-}
-td, th {
-  padding: 0;
-  padding-left: 0.5rem;
-}
-td {
-  border-top: 1px dashed #ccc;
-  border-left: 1px dashed #ccc;
-  text-align: center;
-}
-td.time, th.time {
-  border-left: none;
-  padding-left: 0;
-  text-align: left;
-}
-</style>
+<style>%STYLE%</style>
 </head>
 <body>
 %BODY%
@@ -167,6 +138,9 @@ def generate_page(data):
     uijs = ""
     with open('ui.js', 'r', encoding='utf-8') as js:
         uijs = js.read()
+    styledata = ""
+    with open('style.css', 'r', encoding='utf-8') as sf:
+        styledata = sf.read()
     
     out = TEMPLATE.replace(
         "%BODY%", nowf).replace(
@@ -174,7 +148,8 @@ def generate_page(data):
         "%TOMORROW%", dateToStr(tomorrow, "%-d.%-m.")).replace(
         "%TBODY%", "".join(outdata)).replace(
         "%FOOTER%", footer).replace(
-        "%UIJS%", uijs)
+        "%UIJS%", uijs).replace(
+        "%STYLE%", styledata)
 
     return out
 
