@@ -7,6 +7,54 @@ DUMMY = False
 URL = 'https://api.spot-hinta.fi/TodayAndDayForward'
 RANGES = (3,6)
 
+COLORS = [
+    (18, 97, 96),
+    (77, 62, 64),
+    (93, 14, 34)
+] # cheap to expensive
+LIMITS = [0.01, 0.10]
+
+def ass(expected, value):
+    assert expected == value, f"{expected} != {value}"
+
+def rgb2hex(c):
+    if c is None:
+        return ""
+    assert 0 <= c[0] <= 255
+    assert 0 <= c[1] <= 255
+    assert 0 <= c[2] <= 255
+    return f"#{c[0]:02x}{c[1]:02x}{c[2]:02x}"
+
+def lin_interp(a, c1, c2):
+    c = 1.0 - a
+    return (
+        round(c2[0] * a + c1[0] * c),
+        round(c2[1] * a + c1[1] * c),
+        round(c2[2] * a + c1[2] * c),
+    )
+
+def color_for_price(priceEur: float) -> (int,int,int):
+    if priceEur is None:
+        return None
+    if priceEur <= LIMITS[0]:
+        return COLORS[0]
+    elif priceEur >= LIMITS[-1]:
+        return COLORS[-1]
+    pos = priceEur / (LIMITS[-1] - LIMITS[0])
+    if pos < 0.5:
+        return lin_interp(pos * 2.0, COLORS[0], COLORS[1])
+    else:
+        return lin_interp((pos - 0.5) * 2.0, COLORS[1], COLORS[2])
+
+def test_color_for_price():
+    ass(COLORS[0], color_for_price(-0.01))
+    ass(COLORS[0], color_for_price(0.001))
+    ass(COLORS[-1], color_for_price(0.11))
+    ass((44, 81, 82), color_for_price(0.02))
+    ass((79, 57, 61), color_for_price(0.05))
+    ass((91, 19, 37), color_for_price(0.085))
+    ass(COLORS[-1], color_for_price(LIMITS[-1]))
+
 def dateToStr(d: datetime, fmt: str) -> str:
     return d.strftime(fmt.replace('%-', '%#') if os.name == 'nt' else fmt)
 
@@ -123,8 +171,8 @@ def generate_page(data):
         outdata.append(f"""
 <tr id="row-{hour}">
 <td class="time">{hour:0>2}</td>
-<td>{format_cents(rows[0][t][1])}</td>
-<td>{format_cents(rows[1][t][1])}</td></tr>
+<td style="background-color: {rgb2hex(color_for_price(rows[0][t][1]))};">{format_cents(rows[0][t][1])}</td>
+<td style="background-color: {rgb2hex(color_for_price(rows[1][t][1]))};">{format_cents(rows[1][t][1])}</td></tr>
 """)
     best = [
         f"""Halvin {RANGES[i]} tuntia: {render_best(stats['best'][i], 3)}""" for i in range(
@@ -156,3 +204,6 @@ def generate_page(data):
 def generate():
     data = fetch_data_dummy() if DUMMY else fetch_data()
     return generate_page(data)
+
+if __name__ == "__main__":
+    test_color_for_price()
