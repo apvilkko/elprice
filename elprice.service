@@ -1,0 +1,15 @@
+[Unit]
+Description=ElPrice Service
+After=network.target
+
+[Service]
+WorkingDirectory=/home/dietpi/projects/elprice
+ExecStart=python3 ./server.py
+User=dietpi
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target
