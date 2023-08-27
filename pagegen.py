@@ -5,17 +5,19 @@ from datetime import date, datetime, timedelta
 
 DUMMY = False
 URL = 'https://api.spot-hinta.fi/TodayAndDayForward'
-RANGES = (3,6)
+RANGES = (3, 6)
 
 COLORS = [
     (18, 97, 96),
     (77, 62, 64),
     (93, 14, 34)
-] # cheap to expensive
+]  # cheap to expensive
 LIMITS = [0.01, 0.10]
+
 
 def ass(expected, value):
     assert expected == value, f"{expected} != {value}"
+
 
 def rgb2hex(c):
     if c is None:
@@ -25,6 +27,7 @@ def rgb2hex(c):
     assert 0 <= c[2] <= 255
     return f"#{c[0]:02x}{c[1]:02x}{c[2]:02x}"
 
+
 def lin_interp(a, c1, c2):
     c = 1.0 - a
     return (
@@ -33,7 +36,8 @@ def lin_interp(a, c1, c2):
         round(c2[2] * a + c1[2] * c),
     )
 
-def color_for_price(priceEur: float) -> (int,int,int):
+
+def color_for_price(priceEur: float) -> (int, int, int):
     if priceEur is None:
         return None
     if priceEur <= LIMITS[0]:
@@ -46,6 +50,7 @@ def color_for_price(priceEur: float) -> (int,int,int):
     else:
         return lin_interp((pos - 0.5) * 2.0, COLORS[1], COLORS[2])
 
+
 def test_color_for_price():
     ass(COLORS[0], color_for_price(-0.01))
     ass(COLORS[0], color_for_price(0.001))
@@ -55,20 +60,24 @@ def test_color_for_price():
     ass((91, 19, 37), color_for_price(0.085))
     ass(COLORS[-1], color_for_price(LIMITS[-1]))
 
+
 def dateToStr(d: datetime, fmt: str) -> str:
     return d.strftime(fmt.replace('%-', '%#') if os.name == 'nt' else fmt)
 
+
 def fetch_data():
-    print("fetching from " +URL)
+    print("fetching from " + URL)
     res = requests.get(URL)
     response = json.loads(res.text)
     return response
+
 
 def fetch_data_dummy():
     print("using dummy fetch")
     with open('dummy.json', 'r', encoding='utf-8') as f:
         response = f.read()
     return json.loads(response)
+
 
 TEMPLATE = r'''
 <!DOCTYPE html>
@@ -100,13 +109,16 @@ TEMPLATE = r'''
 </html>
 '''
 
+
 def init_rows(i):
     return [[x, None] for x in range(i+0, i+24)]
+
 
 def format_cents(value: float):
     if value is None:
         return ""
     return str(round(value * 100, 2)).replace('.', ',')
+
 
 def calc_average(data):
     items = [x[1] for x in data if x[1] is not None]
@@ -114,9 +126,10 @@ def calc_average(data):
         return sum(items) / len(items)
     return None
 
+
 def calc_range(data, x, now: datetime):
     items = [y for day in data for y in day]
-    items = [y for y in items if y[0] >= now.hour] # only look at future
+    items = [y for y in items if y[0] >= now.hour]  # only look at future
     sums = []
     for i in range(0, len(items)):
         r = items[i:i+x]
@@ -126,14 +139,18 @@ def calc_range(data, x, now: datetime):
 
     return sorted(sums)
 
-def safe_list_get (l, i, default):
+
+def safe_list_get(l, i, default):
     try:
         return l[i]
     except IndexError:
         return default
 
-def calc_pk(data):
+
+def calc_pk(data, data2=None):
     items = [y[1] for y in data]
+    if data2:
+        items.extend([x[1] for x in data2])
     out = []
     for i in range(0, len(items)):
         pk = [safe_list_get(items, j, None) for j in range(i, i + RANGES[0])]
@@ -141,7 +158,8 @@ def calc_pk(data):
             out.append(sum(pk) * 1.8 / RANGES[0])
         else:
             out.append(None)
-    return out
+    return out[0:len(data)]
+
 
 def render_best(best, index, amount) -> str:
     res = []
@@ -158,12 +176,35 @@ def render_best(best, index, amount) -> str:
                 res.append(f"huomenna {hour - 24}:00")
     return ", ".join(res)
 
+
+def render_cell(i: int, t: int, rows, stats):
+    hour = rows[0][t][0]
+    cents = rows[i][t][1]
+    min = stats['min'][i]
+    print("render_cell", min, cents, hour, stats['max'][i])
+    percent = None if cents is None else round(
+        100 * ((cents-min) / (stats['max'][i] - min)))
+    pk_max_val = "🠉" if stats['pk'][i][hour] == stats['pk_max'][i] else ""
+    pk_min_val = "🠋" if stats['pk'][i][hour] == stats['pk_min'][i] else ""
+    color = rgb2hex(color_for_price(cents))
+    inv_percent = None if percent is None else 100 - percent
+    style = ""
+    if color:
+        if percent == 100:
+            style = f"background-color: {color};"
+        else:
+            style = f"background: linear-gradient(to right, {color} 0% {percent}%, rgba(0,0,0,0) {percent}% {inv_percent}%);"
+    return f"""<td style="{style}">{format_cents(cents)}</td>
+<td>{format_cents(stats['pk'][i][hour])}{pk_max_val}{pk_min_val}</td>
+"""
+
+
 def generate_page(data):
     now = datetime.now()
     nowf = dateToStr(now, "Luotu %-d.%-m.%Y %a %H:%M.%S")
     today = date.today()
     tomorrow = date.today() + timedelta(days=1)
-    
+
     rows = [init_rows(0), init_rows(24)]
 
     for d in data:
@@ -185,27 +226,42 @@ def generate_page(data):
         calc_average(rows[0]),
         calc_average(rows[1])
     )
+    stats['max'] = (
+        max([x[1] for x in rows[0] if x[1] is not None]),
+        max([x[1] for x in rows[1] if x[1] is not None]),
+    )
+    stats['min'] = (
+        min([x[1] for x in rows[0] if x[1] is not None]),
+        min([x[1] for x in rows[1] if x[1] is not None]),
+    )
+    print(stats['max'], stats['min'])
     stats['pk'] = (
-        calc_pk(rows[0]),
+        calc_pk(rows[0], rows[1]),
         calc_pk(rows[1])
     )
+    stats['pk_max'] = (
+        max([x for x in stats['pk'][0] if x is not None]),
+        max([x for x in stats['pk'][1] if x is not None]),
+    )
+    stats['pk_min'] = (
+        min([x for x in stats['pk'][0] if x is not None]),
+        min([x for x in stats['pk'][1] if x is not None]),
+    )
     stats['best'] = [calc_range(rows, x, now) for x in RANGES]
+
     outdata = []
     for t in range(0, 24):
         hour = rows[0][t][0]
         outdata.append(f"""
 <tr id="row-{hour}">
 <td class="time">{hour:0>2}</td>
-<td style="background-color: {rgb2hex(color_for_price(rows[0][t][1]))};">{format_cents(rows[0][t][1])}</td>
-<td>{format_cents(stats['pk'][0][hour])}</td>
-<td style="background-color: {rgb2hex(color_for_price(rows[1][t][1]))};">{format_cents(rows[1][t][1])}</td>
-<td>{format_cents(stats['pk'][1][hour])}</td>
+{render_cell(0, t, rows, stats)}
+{render_cell(1, t, rows, stats)}
 </tr>
 """)
     best = [
         f"""Halvin {RANGES[i]} tuntia: {render_best(stats['best'], i, 3)}""" for i in range(
             0, len(RANGES))]
-
 
     footer = f"""<p>Keskihinta tänään {format_cents(
         stats['average'][0])} snt; huomenna {format_cents(
@@ -217,7 +273,7 @@ def generate_page(data):
     styledata = ""
     with open('style.css', 'r', encoding='utf-8') as sf:
         styledata = sf.read()
-    
+
     out = TEMPLATE.replace(
         "%BODY%", nowf).replace(
         "%TODAY%", dateToStr(today, "%-d.%-m.")).replace(
@@ -229,9 +285,11 @@ def generate_page(data):
 
     return out
 
+
 def generate():
     data = fetch_data_dummy() if DUMMY else fetch_data()
     return generate_page(data)
+
 
 if __name__ == "__main__":
     test_color_for_price()

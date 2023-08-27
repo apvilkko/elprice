@@ -8,8 +8,10 @@ serverPort = 8234
 lastFetch = None
 result = None
 
+
 def should_fetch(now: datetime, lastFetch: datetime):
     return (now - lastFetch) > timedelta(hours=1)
+
 
 class MyServer(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -27,7 +29,8 @@ class MyServer(BaseHTTPRequestHandler):
                 self.send_response(400)
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
-                self.wfile.write(bytes("Could not fetch data: " + str(e), "utf-8"))
+                self.wfile.write(
+                    bytes("Could not fetch data: " + str(e), "utf-8"))
         else:
             self.send_result()
 
@@ -38,7 +41,8 @@ class MyServer(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(result)
 
-if __name__ == "__main__":        
+
+if __name__ == "__main__":
     webServer = HTTPServer((hostName, serverPort), MyServer)
     print("Server started http://%s:%s" % (hostName, serverPort))
 
