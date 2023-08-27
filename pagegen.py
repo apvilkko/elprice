@@ -3,7 +3,7 @@ import requests
 import json
 from datetime import date, datetime, timedelta
 
-DUMMY = True
+DUMMY = False
 URL = 'https://api.spot-hinta.fi/TodayAndDayForward'
 RANGES = (3, 6)
 
