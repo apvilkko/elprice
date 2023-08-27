@@ -3,7 +3,7 @@ import requests
 import json
 from datetime import date, datetime, timedelta
 
-DUMMY = False
+DUMMY = True
 URL = 'https://api.spot-hinta.fi/TodayAndDayForward'
 RANGES = (3, 6)
 
@@ -181,11 +181,12 @@ def render_cell(i: int, t: int, rows, stats):
     hour = rows[0][t][0]
     cents = rows[i][t][1]
     min = stats['min'][i]
-    print("render_cell", min, cents, hour, stats['max'][i])
     percent = None if cents is None else round(
         100 * ((cents-min) / (stats['max'][i] - min)))
-    pk_max_val = "🠉" if stats['pk'][i][hour] == stats['pk_max'][i] else ""
-    pk_min_val = "🠋" if stats['pk'][i][hour] == stats['pk_min'][i] else ""
+    pk_max_val = "🠉" if stats['pk'][i][hour] == stats['pk_max'][i] and \
+        stats['pk_max'][i] is not None else ""
+    pk_min_val = "🠋" if stats['pk'][i][hour] == stats['pk_min'][i] and \
+        stats['pk_min'][i] is not None else ""
     color = rgb2hex(color_for_price(cents))
     inv_percent = None if percent is None else 100 - percent
     style = ""
@@ -197,6 +198,20 @@ def render_cell(i: int, t: int, rows, stats):
     return f"""<td style="{style}">{format_cents(cents)}</td>
 <td>{format_cents(stats['pk'][i][hour])}{pk_max_val}{pk_min_val}</td>
 """
+
+
+def safe_max(a):
+    try:
+        return max(a)
+    except ValueError:
+        return None
+
+
+def safe_min(a):
+    try:
+        return min(a)
+    except ValueError:
+        return None
 
 
 def generate_page(data):
@@ -227,12 +242,12 @@ def generate_page(data):
         calc_average(rows[1])
     )
     stats['max'] = (
-        max([x[1] for x in rows[0] if x[1] is not None]),
-        max([x[1] for x in rows[1] if x[1] is not None]),
+        safe_max([x[1] for x in rows[0] if x[1] is not None]),
+        safe_max([x[1] for x in rows[1] if x[1] is not None]),
     )
     stats['min'] = (
-        min([x[1] for x in rows[0] if x[1] is not None]),
-        min([x[1] for x in rows[1] if x[1] is not None]),
+        safe_min([x[1] for x in rows[0] if x[1] is not None]),
+        safe_min([x[1] for x in rows[1] if x[1] is not None]),
     )
     print(stats['max'], stats['min'])
     stats['pk'] = (
@@ -240,12 +255,12 @@ def generate_page(data):
         calc_pk(rows[1])
     )
     stats['pk_max'] = (
-        max([x for x in stats['pk'][0] if x is not None]),
-        max([x for x in stats['pk'][1] if x is not None]),
+        safe_max([x for x in stats['pk'][0] if x is not None]),
+        safe_max([x for x in stats['pk'][1] if x is not None]),
     )
     stats['pk_min'] = (
-        min([x for x in stats['pk'][0] if x is not None]),
-        min([x for x in stats['pk'][1] if x is not None]),
+        safe_min([x for x in stats['pk'][0] if x is not None]),
+        safe_min([x for x in stats['pk'][1] if x is not None]),
     )
     stats['best'] = [calc_range(rows, x, now) for x in RANGES]
 
