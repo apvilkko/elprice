@@ -3,8 +3,9 @@ import requests
 import json
 import html
 import re
+from datetime import datetime
 
-DUMMY = True
+DUMMY = False
 URL = 'https://api.spot-hinta.fi/TodayAndDayForward'
 ATTR = "data-prices"
 
@@ -31,8 +32,12 @@ def replace(inputFilename):
     data = get_data()
     with open(inputFilename, 'r+', encoding='utf-8') as f:
         existing = f.read()
+        decorated_data = {
+            'data': data,
+            'updated': datetime.now().isoformat()
+        }
         replaced = re.sub(fr'{ATTR}="[^"]+"',
-                          f'{ATTR}="{html.escape(json.dumps(data), quote=True)}"',
+                          f'{ATTR}="{html.escape(json.dumps(decorated_data), quote=True)}"',
                           existing)
         f.seek(0)
         f.write(replaced)
