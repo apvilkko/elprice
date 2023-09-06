@@ -1,10 +1,7 @@
 import os
-import requests
-import json
 from datetime import date, datetime, timedelta
+from data import get_data
 
-DUMMY = False
-URL = 'https://api.spot-hinta.fi/TodayAndDayForward'
 RANGES = (3, 6)
 
 COLORS = [
@@ -63,20 +60,6 @@ def test_color_for_price():
 
 def dateToStr(d: datetime, fmt: str) -> str:
     return d.strftime(fmt.replace('%-', '%#') if os.name == 'nt' else fmt)
-
-
-def fetch_data():
-    print("fetching from " + URL)
-    res = requests.get(URL)
-    response = json.loads(res.text)
-    return response
-
-
-def fetch_data_dummy():
-    print("using dummy fetch")
-    with open('dummy.json', 'r', encoding='utf-8') as f:
-        response = f.read()
-    return json.loads(response)
 
 
 TEMPLATE = r'''
@@ -318,7 +301,7 @@ def generate_page(data):
 
 
 def generate():
-    data = fetch_data_dummy() if DUMMY else fetch_data()
+    data = get_data()
     return generate_page(data)
 
 
