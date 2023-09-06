@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import os
 from secret import remotepath, remotehost
 from data import replace
