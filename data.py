@@ -2,10 +2,11 @@ import sys
 import requests
 import json
 import html
+import re
 
 DUMMY = True
 URL = 'https://api.spot-hinta.fi/TodayAndDayForward'
-PLACEHOLDER = "__DATA_PLACEHOLDER__"
+ATTR = "data-prices"
 
 
 def fetch_data():
@@ -30,8 +31,9 @@ def replace(inputFilename):
     data = get_data()
     with open(inputFilename, 'r+', encoding='utf-8') as f:
         existing = f.read()
-        replaced = existing.replace(
-            PLACEHOLDER, html.escape(json.dumps(data), quote=True))
+        replaced = re.sub(fr'{ATTR}="[^"]+"',
+                          f'{ATTR}="{html.escape(json.dumps(data), quote=True)}"',
+                          existing)
         f.seek(0)
         f.write(replaced)
         f.truncate()
