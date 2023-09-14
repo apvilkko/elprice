@@ -11,3 +11,13 @@ export type PriceItem = {
 }
 
 export type RGB = [number, number, number]
+
+export type Stats = {
+  max: PriceItem
+  min: PriceItem
+  pkMax: PriceItem
+  pkMin: PriceItem
+  average: number
+  shortBest: number[]
+  longBest: number[]
+}

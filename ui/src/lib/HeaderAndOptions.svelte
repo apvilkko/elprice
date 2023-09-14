@@ -11,7 +11,7 @@
   }
 </script>
 
-<ul>
+<ul class="lang-select">
   {#each LANGUAGES as lang}
     <li>
       {#if $currentLanguage === lang}

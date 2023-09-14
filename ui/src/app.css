@@ -1,7 +1,7 @@
 html, body {
   background-color: black;
   color: #ccc;
-  font-size: 3.4vw;
+  font-size: min(20pt, 3.4vw);
 }
 body {
   font-weight: 300;
@@ -11,6 +11,8 @@ table {
   margin: 0;
   padding: 0;
   margin-top: 1rem;
+  table-layout: fixed;
+  width: 100%;
 }
 th {
   text-align: left;
@@ -29,4 +31,30 @@ td.time, th.time {
   border-left: none;
   padding-left: 0;
   text-align: left;
+}
+.lang-select {
+  display: inline-flex;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.7rem;
+}
+
+.lang-select > * {
+  margin-right: 1em;
+}
+
+.lang-select button {
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  margin: 0;
+}
+
+h1 {
+  margin-top: 0;
+  font-size: 1.2rem;
 }

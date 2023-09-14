@@ -7,7 +7,7 @@ export const lastModified = writable<Date>()
 export const prices = writable<PriceData[]>([])
 
 const toNumber = (v: string | null | undefined) =>
-  v === null ? NaN : Number(v)
+  v === null ? NaN : Number(String(v).replace(",", "."))
 
 const isGoodTax = (val: number) => !Number.isNaN(val) && val >= 0 && val < 99
 const isGoodMargin = isGoodTax
@@ -26,6 +26,8 @@ export const colors = writable<[RGB, RGB, RGB]>([
   [77, 62, 64],
   [93, 14, 34],
 ])
+
+export const timeSpans = writable<[number, number]>([3, 6])
 
 const LIMIT_DEFAULTS = [0.01, 0.1]
 
@@ -50,7 +52,7 @@ const getInitialLimits = () => {
 
 export const limits = writable(getInitialLimits())
 
-const DUMMY = true
+const DUMMY = import.meta.env.MODE === "development"
 
 export const readStaticData = async () => {
   let jsonData

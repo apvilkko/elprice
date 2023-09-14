@@ -43,6 +43,14 @@ const TRANSLATIONS: Array<Record<Language, string>> = [
     fi: "marginaali",
     en: "margin",
   },
+  {
+    fi: "Keskihinta",
+    en: "Average price",
+  },
+  {
+    fi: "snt",
+    en: "c",
+  },
 ]
 
 const TRANS_MAP = TRANSLATIONS.reduce((acc, curr) => {
